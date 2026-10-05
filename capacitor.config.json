@@ -1,0 +1,9 @@
+{
+  "appId": "ir.chipspocket.app",
+  "appName": "Chips Pocket",
+  "webDir": "www",
+  "server": {
+    "url": "https://chipspocket.ir",
+    "cleartext": false
+  }
+}
