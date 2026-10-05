@@ -1,0 +1,72 @@
+name: CD - Android
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    name: Build Android APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Get version
+        id: version
+        shell: bash
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          VERSION="${TAG#v}"
+
+          echo "Tag: $TAG"
+          echo "Version: $VERSION"
+
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: gradle
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Sync Capacitor
+        run: npx cap sync android
+
+      - name: Make Gradle executable
+        run: chmod +x android/gradlew
+
+      - name: Build APK
+        working-directory: android
+        run: ./gradlew assembleDebug
+
+      - name: Rename APK
+        run: |
+          cp android/app/build/outputs/apk/debug/app-debug.apk \
+             "chipspocket-${{ steps.version.outputs.version }}.apk"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: Chips Pocket ${{ steps.version.outputs.version }}
+          generate_release_notes: true
+          files: chipspocket-${{ steps.version.outputs.version }}.apk
